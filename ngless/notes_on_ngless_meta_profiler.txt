@@ -1,0 +1,21 @@
+#' Notes on Installation and Running ngless
+#' - see: https://ngless.embl.de/ng-meta-profiler.html
+#' - see: https://github.com/ngless-toolkit/ng-meta-profiler/tree/master
+
+
+#' Installation:
+#' per instructions above, start with conda environment setup:
+#' 'conda install -c bioconda ngless'
+#' from github repo, copy *.ngl script of choice to working directory
+#' per instructions, next step should be ...
+#' 'ngless --threads=8 --trace human-gut.ngl INPUT-DIRECTORY OUTPUT-DIRECTORY'
+#' but this fails at installation of motus modules
+#' workaround:
+#' (1) modify .ngl to accurately reflect ngless version (1.5) and mOTUs version (3.1), as shown in the included human-gut-profiler.ngl file
+#' (2) git clone the https://github.com/ngless-toolkit/ngless-contrib repo and run its install.sh script to generate the motus modules
+#' (3) run the following to generate mOTUs database at appropriate ngless location:
+#' 'cd /home/###username###/.local/share/ngless/data/Modules/motus.ngm/3.1 && python -m venv mOTUs-3.1.0-venv && source mOTUs-3.1.0-venv/bin/activate && wget https://github.com/motu-tool/mOTUs/archive/3.1.0.tar.gz && tar xf 3.1.0.tar.gz && rm -f 3.1.0.tar.gz && pip install ./mOTUs-3.1.0 && motus downloadDB && rm -rf mOTUs-3.1.0
+
+
+#' Running ngless-meta-profiler:
+#' run 'ngless --threads=8 --trace human-gut.ngl INPUT-DIRECTORY OUTPUT-DIRECTORY'
