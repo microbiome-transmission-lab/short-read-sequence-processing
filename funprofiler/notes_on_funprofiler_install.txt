@@ -1,0 +1,28 @@
+#' installation per biorxiv manuscript: https://www.biorxiv.org/content/10.1101/2023.11.06.565843v1.full
+#' and github repository: https://github.com/KoslickiLab/funprofiler
+
+#' start with creation of conda environment:
+# conda create -n funcprofiler
+# conda activate funcprofiler
+# conda install -c bioconda -c conda-forge sourmash pandas 
+
+#' clone github repository and run demo data against reference
+# git clone https://github.com/KoslickiLab/funprofiler.git
+# cd funprofiler/demo 
+# Obtain reference data (pre-built sketches for the KEGG database)
+# wget https://zenodo.org/records/10045253/files/KOs_sketched_scaled_1000.sig.zip
+# profile the example fastq file
+# python ../funcprofiler.py metagenome_example.fastq KOs_sketched_scaled_1000.sig.zip  7 1000 ko_profiles -g gather_out
+# 
+
+
+#' mkdir 'FracMinHash_KO_sketch_zenodo' in ~/funprofiler directory
+#' copy reference databases into directory from https://zenodo.org/records/10045253
+#' note: SBTs are sequence-bloom-trees, which make the pipeline fun faster
+
+#' run pipeline using the funprofiler_loop.sh
+#' for example: conda activate funcprofiler; bash funprofiler_loop.sh ~/input_seq_directory ~/output_seq_directory ~/funprofiler/FracMinHash_KO_sketch_zenodo/KOs_sbt_scaled_1000_k_11.sbt.zip 11 1000
+
+
+
+
