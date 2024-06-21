@@ -1,0 +1,145 @@
+---
+title: "MetaPhlAn4 Processing and Cleaning"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+This markdown will process short read sequences in fastq.gz format and output taxonomic
+profiles from MetaPhlAn4. 
+GitHub: https://github.com/biobakery/MetaPhlAn
+Publication: https://www.biorxiv.org/content/10.1101/2022.08.22.504593v1 
+
+Set up software for running MetaPhlAn4 in linux
+
+1. Install Anaconda or miniconda (a smaller version that is sufficient for 
+MetaPhlAn4 but if frequently running sequence analysis and multiple tools
+it may be worth it to use Anaconda)
+Anaconda: https://docs.anaconda.com/anaconda/install/
+miniconda: https://docs.anaconda.com/miniconda/ 
+
+2. Install MetaPhlAn4 
+GitHub link: https://github.com/biobakery/MetaPhlAn/wiki/MetaPhlAn-4#installation
+Supplemental help: https://omicx.cc/posts/2021-12-17-install-and-setup-metaphlan-3/
+
+$ conda install -c bioconda metaphlan
+
+3. Troubleshooting
+If you can't move ahead yet, try adding channels for conda-forge and bioconda and 
+ordering channels:
+
+	$ conda config --add channels defaults
+  $ conda config --add channels bioconda
+  $ conda config --add channels conda-forge
+  
+  $ conda config –set channel_priority flexible
+  $ conda create –name mpa –c conda-forge –c bioconda metaphlan
+  
+  Install bowtie inside this environment
+  {add link for installation}
+  $ metaphlan --install --bowtie2db <database folder>
+  
+
+This will install the package and CHOCOPhlAn database. 
+
+Running MetaPhlAn
+
+1. Activate MetaPhlAn environment within conda
+  
+  $ conda activate mpa
+  
+2. Set directory to folder containing sequences (input folder)
+
+If stored locally:
+
+  $ cd /mnt/c/User/pennkey/Downloads/sequence_folder
+  
+If stored in box sync (for large quantities of files)
+
+  $ cd /mnt/c/User/pennkey/Box\ Sync/sequence_folder
+  
+3. Set up your output files
+
+Choose where to locate your output files (locally, GitHub, or Box Sync)
+If running remotely, Box Sync is a good option as you can continue to monitor 
+progress and access data externally without logging in. 
+
+Create 2 output files within your 'metaphlan' output file:
+1. profiles
+2. bowtie2
+
+The profiles will be text or tsv files containing taxonomic assignments and read
+counts. 
+
+
+4. Test your run on an individual sample
+
+To run individual (non read-paired samples):
+  pennkey/input/directory $ metaphlan file_1.fastq.gz --input_type fastq 
+                            -o .../metaphlan/profiles/profiled_metagenome.txt (or .tsv)
+                            --bowtie2out .../metaphlan/bowtie2/metagenome.bowtie2.bz2
+                            
+To run on read-paired data (seq_1_R1.fastq, seq_1_R2.fastq)
+
+  pennkey/input/directory $ metaphlan file_1_R1.fastq.gz, file_1_R2.fastq.gz                                       --bowtie2out                                                                         .../metaphlan/bowtie2/file_1_metagenome.bowtie2.bz2 
+                             --nproc 5 –input_type fastq 
+                          –o .../metaphlan/profiles/file_1_profiled_metagenome.txt
+
+5. To run a loop on all sequences in a folder, set the directory in that folder. 
+Ex.samples are labelled UM1_R1.fastq.gz and UM1_R2.fastq.gz
+
+  pennkey/input/directory $ for i in *_R1.fastq.gzl do metaphlan
+                            $i,${i/_R1.fastq.gz/_R2.fastq.gz}
+                            --input_type fastq -nproc 8
+                            --bowtie2out .../bowtie2/${i%}.bowtie2.bz2
+                            -o .../profiles/${i%}_profiled.txt ; done
+                            
+6. Example using paired read fasta files and explanations (example reading from
+and into box)
+  For this example, files are stored in box sync folder titled "project_1" and
+  sample ID's are S1, S2, S3... and read-paired
+    a. Sync box files to desktop
+    b. Create new folders: metaphlan/bowtie2 and metaphlan/profiles
+    
+    $ conda activate mpa
+    $ cd /mnt/c/User/Box\ Sync/project_1
+    .../Box\ Sync/project_1/ $ for i in *R1.fastq.gz; #for files with ID.fastq
+                                *perform metaphlan on both R1 and R2 sequences per ID
+                                *and pull the string before "_R*.fastq.gz" as the file                                 *ID    
+                                do metaphlan $i,{i/_R1.fastq.gz/_R2.fastq.gz} 
+                                #Read all fastq files in the folder
+                                --input_type fastq
+                                #Run on 8 cores (can change- storage and speed)
+                                -nproc 8 
+                                #bowtie files will output to the bowtie file with
+                                #"ID".bowtie2.bz2
+                                --bowtie2out .../project_1/metaphlan/bowtie2/                                         ${i%}.bowtie2.bz2
+                                #profiles will output to profile folder as
+                                # "ID"_profile.txt
+                                -o .../project_1/metaphlan/profiles/
+                                ${i%}_profile.txt 
+                                #run for each sequence and end loop
+                                ; done
+     
+     All together:
+     For i in *_R1.fastq.gz; do metaphlan $i.${i/_R1.fastq.gz/_R2.fastq.gz} --             input_type fastq –nproc 10 –bowtie2out ../../project name metaphlan                   output/bowtie2/${i%}.bowtie2.bz2 -o ../../project name metaphlan output/              profiles/${i%}_profiled.txt; done      
+     
+     
+     
+     
+  Metaphlan output structure and cleaning
+                      
+                                
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
