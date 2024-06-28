@@ -1,0 +1,135 @@
+---
+title: "Funprofiler Data Cleaning"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+Set up
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(gt)
+library(ggplot2)
+library(viridis)
+```
+
+#### Read in files ####
+# set directory to folder containing all raw funprofiler output profiles
+```{r}
+# prevent scientific notation
+options(scipen = 999)
+
+# identify sequencing files
+file_list <-  list.files(pattern = "profiles")
+
+# create empty df to hold results
+df_clean <- data.frame()
+
+# loop through sequencing files
+
+for (file in file_list) {
+  df <- read_csv(file) %>%
+    mutate(file_id = substr(file, 1, 32)) #This works for S numbers from labvantage, edit for other uses
+  df_clean <- rbind(df_clean, df)
+  print(file)
+}
+```
+
+
+Set the directory to the final repository you want everything stored in
+```{r}
+df_clean |> 
+  write_csv("data/funprofiler/2_clean_profiles/funprofiler_cdi_2.csv.bz2")
+#Data is often large, use a .csv.bz2 format to compress size
+```
+
+####Clean data for use ####
+
+To create a compiled file with ID's pulled from larger filenames, 
+use a list
+```{r}
+##### Pull out sample ID's and attach metadata #####
+
+#Example file containing sample IDs, this can be pulled from labvantage or 
+#running listfiles to gather the names of all samples 
+metadata_file<-read_xlsx("data/List files metamira 1-2.xlsx")
+
+
+metadata_ids<-metadata_file |>
+  janitor::clean_names() |>
+  select(file_name) |>
+  rename(sample_id = current_file_name) |>
+  mutate(sample_id = gsub("_R1.fastq.gz", "", sample_id)) |>
+  mutate(sample_id = gsub("_R2.fastq.gz", "", sample_id)) |>
+  distinct() 
+
+write_csv(metadata_ids, "data/metadata_ids.csv")
+```
+
+```{r}
+# Create string of sample IDs from existing metadata to pull them out
+
+#List of id's to pull from full filenames
+metadata_ids |>
+ # mutate(sample_id = gsub("_", "-", sample_id)) |> #if there are different formats between metadata and your output IDs, edit
+  pull(sample_id) |>
+  paste0(collapse = "|") |>
+  identity() -> id_search_string
+
+```
+
+```{r}
+df_clean |>
+  mutate(sample_id = file_id) |>
+  mutate(sample_id = gsub("_","-", sample_id)) |> #Use if formatting is inconsistent 
+  mutate(sample_id = str_extract(string = sample_id,id_search_string )) |>
+  mutate(read_pair = case_when(str_detect(file_id,"R1") ~ "R1",
+                               str_detect(file_id,"R2") ~ "R2")) |> #This is relevant for read-paired data
+  left_join(metadata_file, by = "sample_id") |> 
+  identity() -> clean_funprofiler
+
+write_csv(clean_funprofiler, filename= "data/clean_funprofiler.csv")
+```
+
+##### Average abundances between read pairs #####
+Funprofiler runs each read pair individually, so abundance values need to be 
+averaged to create one dataset. 
+```{r}
+clean_funprofiler |>
+  group_by(external_participant_id,collection_date,sample_id,sample_type,study,read_pair) |>
+  mutate(total_abundance = sum(abundance))|> #Should add up to 1 per read pair
+  select(total_abundance, read_pair)
+
+clean_funprofiler |> #Average read pair abundances
+  group_by(sample_id, external_participant_id, collection_date, study, sample_type) |> #original_sample_type
+  mutate(avg_abundance = mean(abundance)) |>
+  select(external_participant_id, collection_date, sample_id, ko_id,avg_abundance, sample_type, study, sample_type) |> 
+  distinct() |>
+  ungroup() |>
+  identity() -> clean_funprofiler_avg_rp
+
+clean_funprofiler_avg_rp |>
+  group_by(external_participant_id, collection_date, sample_id,avg_abundance, study, sample_type) |>
+  mutate(total_abundance = sum(avg_abundance)) #New total abundances per specimen
+
+clean_funprofiler_avg_rp |> #Convert new abundances into relative abundances
+  filter(!is.na(external_participant_id)) |>
+  group_by(sample_id, external_participant_id, collection_date, study, sample_type) |>
+  mutate(total_sum = sum(avg_abundance)) |>
+  ungroup() |>
+  group_by(sample_id, external_participant_id, collection_date, study, sample_type, ko_id) |>
+  mutate(avg_rel_abundance = (avg_abundance/total_sum)) |>
+  ungroup() |>
+  identity() -> clean_funprofiler_relative_abs
+
+clean_funprofiler_relative_abs |>
+  group_by(sample_id, external_participant_id, collection_date, study, sample_type) |>
+  mutate(totals = sum(avg_rel_abundance)) #Check that adds up to 1
+
+write_csv(clean_funprofiler_relative_abs, "data/funprofiler/3_profiles_w_metadata/funprofiler_cdi_2_metadata_clean.csv.bz2")
+
+```
+
